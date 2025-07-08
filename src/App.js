@@ -18,13 +18,14 @@ const App = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [error, setError] = useState("");
 
-  // Load projects on mount
+  // Load projects on component mount
   useEffect(() => {
     const loadProjects = async () => {
       setLoadingProjects(true);
       try {
         const data = await fetchProjects();
         setProjects(data);
+        setLogs(prev => [...prev, `✅ Loaded ${data.length} projects.`]);
       } catch (err) {
         setError("Failed to load projects");
         console.error(err);
@@ -45,37 +46,55 @@ const App = () => {
 
     setLoading(true);
     setError("");
-    setLogs(prev => [...prev, `Loading test cases for ${selectedProject}...`]);
+    setLogs(prev => [...prev, `🔄 Loading test cases for "${selectedProject}"...`]);
 
     fetchTestCases(selectedProject)
       .then(data => {
         setTestCases(data);
-        setLogs(prev => [...prev, `Found ${data.length} test cases`]);
+        setLogs(prev => [...prev, `✅ Found ${data.length} test cases.`]);
       })
       .catch(err => {
-        setError(err.message || "Failed to load test cases");
-        setLogs(prev => [...prev, `Error: ${err.message}`]);
+        const msg = err.message || "Failed to load test cases";
+        setError(msg);
+        setLogs(prev => [...prev, `❌ Error: ${msg}`]);
       })
       .finally(() => setLoading(false));
   }, [selectedProject]);
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     if (!selectedTestCase) {
-      setError("Please select a test case");
+      setError("⚠️ Please select a test case.");
       return;
     }
+
     setLogs(prev => [
       ...prev,
-      `Starting test: ${selectedTestCase}`,
-      `Using browser: ${selectedBrowser}`,
-      "Test execution started..."
+      `🚀 Starting test: "${selectedTestCase}"`,
+      `🧪 Browser: ${selectedBrowser}`,
+      "⏳ Test execution started..."
     ]);
-    // Add test execution logic here
+
+    try {
+      const response = await fetch('http://localhost:8080/api/start-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: selectedProject,
+          testCase: selectedTestCase,
+          browser: selectedBrowser,
+        }),
+      });
+
+      const result = await response.text();
+      setLogs(prev => [...prev, `✅ Test started: ${result}`]);
+    } catch (err) {
+      setLogs(prev => [...prev, `❌ Failed to start test: ${err.message}`]);
+    }
   };
 
   const handleStopTest = () => {
-    setLogs(prev => [...prev, "Test stopped by user"]);
-    // Add test stop logic here
+    setLogs(prev => [...prev, "🛑 Test stopped by user."]);
+    // Add backend stop logic here if needed
   };
 
   return (
@@ -90,6 +109,7 @@ const App = () => {
 
         {/* Main Content */}
         <div className="p-6 space-y-6">
+          {/* Project Dropdown */}
           <ProjectDropdown
             projects={projects}
             selectedProject={selectedProject}
@@ -97,6 +117,7 @@ const App = () => {
             onChange={(e) => setSelectedProject(e.target.value)}
           />
 
+          {/* Test Case Dropdown */}
           <TestCaseDropdown
             testCases={testCases}
             selectedTestCase={selectedTestCase}
@@ -104,19 +125,24 @@ const App = () => {
             onChange={(e) => setSelectedTestCase(e.target.value)}
           />
 
+          {/* Browser Dropdown */}
           <BrowserDropdown
             selectedBrowser={selectedBrowser}
             onChange={(e) => setSelectedBrowser(e.target.value)}
           />
 
+          {/* Status & Error Messages */}
           <StatusIndicator loading={loading} error={error} />
 
+          {/* Start / Stop Buttons */}
           <ActionButtons
             onStart={handleStartTest}
             onStop={handleStopTest}
             isStartDisabled={!selectedTestCase || loading}
+            selectedBrowser={selectedBrowser}
           />
 
+          {/* Logs */}
           <TestLogs logs={logs} />
         </div>
       </div>

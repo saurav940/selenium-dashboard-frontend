@@ -1,20 +1,35 @@
+import React, { useEffect, useState } from "react";
+
 const BrowserDropdown = ({ selectedBrowser, onChange }) => {
-    return (
-      <div className="mb-6">
-        <label className="block text-gray-700 font-medium mb-2">
-          Browser:
-        </label>
-        <select
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-          value={selectedBrowser}
-          onChange={onChange}
-        >
-          <option value="chrome">Chrome</option>
-          <option value="firefox">Firefox</option>
-          <option value="edge">Microsoft Edge</option>
-        </select>
-      </div>
-    );
-  };
-  
-  export default BrowserDropdown;
+  const [browserOptions, setBrowserOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchBrowser = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/browser");
+        const browser = await response.text(); // ✅ plain string
+        setBrowserOptions([browser]); // ✅ wrap as array
+      } catch (error) {
+        console.error("Error fetching browser:", error);
+      }
+    };
+
+    fetchBrowser();
+  }, []);
+
+  return (
+    <div>
+      <label htmlFor="browser">Browser:</label>
+      <select id="browser" value={selectedBrowser} onChange={onChange}>
+        <option value="">Select Browser</option>
+        {browserOptions.map((browser, index) => (
+          <option key={index} value={browser.toLowerCase()}>
+            {browser}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+export default BrowserDropdown;
