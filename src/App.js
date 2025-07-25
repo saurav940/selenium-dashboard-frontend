@@ -11,14 +11,14 @@ const App = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [testCases, setTestCases] = useState([]);
-  const [selectedTestCase, setSelectedTestCase] = useState("");
+  const [selectedTestCases, setSelectedTestCases] = useState([]);
   const [selectedBrowser, setSelectedBrowser] = useState("chrome");
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [error, setError] = useState("");
 
-  // Load projects on component mount
+  // Load project list
   useEffect(() => {
     const loadProjects = async () => {
       setLoadingProjects(true);
@@ -36,11 +36,11 @@ const App = () => {
     loadProjects();
   }, []);
 
-  // Load test cases when project changes
+  // Fetch test cases when project changes
   useEffect(() => {
     if (!selectedProject) {
       setTestCases([]);
-      setSelectedTestCase("");
+      setSelectedTestCases([]);
       return;
     }
 
@@ -62,16 +62,17 @@ const App = () => {
   }, [selectedProject]);
 
   const handleStartTest = async () => {
-    if (!selectedTestCase) {
-      setError("⚠️ Please select a test case.");
+    if (!selectedTestCases.length) {
+      setError("⚠️ Please select at least one test case.");
       return;
     }
 
+    setError("");
     setLogs(prev => [
       ...prev,
-      `🚀 Starting test: "${selectedTestCase}"`,
+      `🚀 Starting ${selectedTestCases.length} test case(s)...`,
       `🧪 Browser: ${selectedBrowser}`,
-      "⏳ Test execution started..."
+      "⏳ Sending test execution request..."
     ]);
 
     try {
@@ -80,13 +81,13 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: selectedProject,
-          testCase: selectedTestCase,
+          testCases: selectedTestCases, // ARRAY of test cases
           browser: selectedBrowser,
         }),
       });
 
       const result = await response.text();
-      setLogs(prev => [...prev, `✅ Test started: ${result}`]);
+      setLogs(prev => [...prev, `✅ Test execution started: ${result}`]);
     } catch (err) {
       setLogs(prev => [...prev, `❌ Failed to start test: ${err.message}`]);
     }
@@ -94,22 +95,20 @@ const App = () => {
 
   const handleStopTest = () => {
     setLogs(prev => [...prev, "🛑 Test stopped by user."]);
-    // Add backend stop logic here if needed
+    // Backend stop logic can go here
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-        {/* Header */}
         <div className="bg-blue-600 px-6 py-4">
           <h1 className="text-2xl font-bold text-white">
             Capital Small Finance Bank Test Dashboard
           </h1>
         </div>
 
-        {/* Main Content */}
         <div className="p-6 space-y-6">
-          {/* Project Dropdown */}
+          {/* Project Selection */}
           <ProjectDropdown
             projects={projects}
             selectedProject={selectedProject}
@@ -117,12 +116,12 @@ const App = () => {
             onChange={(e) => setSelectedProject(e.target.value)}
           />
 
-          {/* Test Case Dropdown */}
+          {/* Test Case Dropdown (Multi-select) */}
           <TestCaseDropdown
             testCases={testCases}
-            selectedTestCase={selectedTestCase}
+            selectedTestCases={selectedTestCases}
             loading={loading}
-            onChange={(e) => setSelectedTestCase(e.target.value)}
+            onChange={(values) => setSelectedTestCases(values)}
           />
 
           {/* Browser Dropdown */}
@@ -131,18 +130,18 @@ const App = () => {
             onChange={(e) => setSelectedBrowser(e.target.value)}
           />
 
-          {/* Status & Error Messages */}
+          {/* Status & Error */}
           <StatusIndicator loading={loading} error={error} />
 
           {/* Start / Stop Buttons */}
           <ActionButtons
             onStart={handleStartTest}
             onStop={handleStopTest}
-            isStartDisabled={!selectedTestCase || loading}
+            isStartDisabled={!selectedTestCases.length || loading}
             selectedBrowser={selectedBrowser}
           />
 
-          {/* Logs */}
+          {/* Test Logs */}
           <TestLogs logs={logs} />
         </div>
       </div>
